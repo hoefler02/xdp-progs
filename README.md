@@ -27,10 +27,10 @@ After that we attach them to the networking namespaces and turn them on.
 
 ```bash
 sudo ip link set veth1 netns net1
-sudo ip link netns exec net1 ip link set dev veth1 up
+sudo ip netns exec net1 ip link set dev veth1 up
 
 sudo ip link set veth2 netns net2
-sudo ip link netns exec net2 ip link set dev veth2 up
+sudo ip netns exec net2 ip link set dev veth2 up
 ```
 
 Finally, we add IP addresses.
