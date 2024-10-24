@@ -8,11 +8,9 @@
 #include <linux/tcp.h>
 #include <stdbool.h>
 
-#define PIN_GLOBAL_NS        2
-
 struct ipv4_lpm_key {
-    unsigned int data;
-    int prefixlen;
+    __u32 prefixlen;
+    __u32 data;
 };
 
 // bpf map to store our ips and prefix lens
@@ -22,7 +20,7 @@ struct {
     __type(value, __u32);
     __uint(map_flags, BPF_F_NO_PREALLOC);
     __uint(max_entries, 255);
-    __uint(pinning, PIN_GLOBAL_NS);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } ipv4_lpm_map SEC(".maps");
 
 SEC("xdp")
