@@ -8,7 +8,7 @@ struct ipv4_lpm_key {
     __u32 data;
 };
 
-const char* pin_dir = "/sys/fs/bpf/xdp/globals/ipv4_lpm_map";
+const char* pin_dir = "/sys/fs/bpf/xdp_lpm_trie_map";
 // const char* pin_dir = "/sys/fs/bpf/xdp/my_map";
 
 void usage(char* prog)
@@ -70,13 +70,13 @@ int main(int argc, char* argv[])
         // build the lpm key structure
         struct ipv4_lpm_key ipv4_key = {
             .prefixlen = prefix,
-            .data = htonl(ip)
+            .data = ip
         };
 
-        inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN);
+        //inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN);
 
         // Print the IP address
-        printf("Trying to add IP: %s with Prefix: %d and Magic: %d\n", ip_str, ipv4_key.prefixlen, magic);
+        printf("Trying to add IP: %s with Prefix: %d and Magic: %d\n", argv[2], ipv4_key.prefixlen, magic);
 
         ret = bpf_map_update_elem(lpm_trie_map_fd, &ipv4_key, &magic, BPF_ANY);
         if (!ret) {
@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
         inet_pton(AF_INET, argv[2], &ip);
         // build the lpm key structure
         struct ipv4_lpm_key ipv4_key = {
-            .data = htonl(ip),
+            .data = ip,
             .prefixlen = 32
         };
         ret = bpf_map_lookup_elem(lpm_trie_map_fd, &ipv4_key, &magic);
