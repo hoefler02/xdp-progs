@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <bpf/bpf.h>
 #include <arpa/inet.h>
+#include <bpf/libbpf.h>
 #include <stdlib.h>
 
 struct ipv4_lpm_key {
@@ -21,25 +22,29 @@ void usage(char* prog)
         exit(1);
 }
 
-// https://docs.kernel.org/bpf/map_lpm_trie.html
+//https://docs.kernel.org/bpf/map_lpm_trie.html
+
 void iterate_lpm_trie(int map_fd)
 {
-    struct ipv4_lpm_key *cur_key = NULL;
-    struct ipv4_lpm_key next_key;
-    int magic;
-    int err;
+        struct ipv4_lpm_key *cur_key = NULL;
+        struct ipv4_lpm_key next_key;
+        char ip_str[INET_ADDRSTRLEN];  // INET_ADDRSTRLEN is defined in arpa/inet.h
+        int value;
+        int err;
 
-    for (;;) {
-        err = bpf_map_get_next_key(map_fd, cur_key, &next_key);
-        if (err)
-            printf("[-] Reached End of Map.\n");
-            break;
+        for (;;) {
+                err = bpf_map_get_next_key(map_fd, cur_key, &next_key);
+                if (err)
+                        break;
 
-        bpf_map_lookup_elem(map_fd, &next_key, &magic);
-        printf("[+] Found IP %pI4 with Prefix %d and Magic Value %d\n", cur_key->data, cur_key->prefixlen, magic);
+                bpf_map_lookup_elem(map_fd, &next_key, &value);
 
-        cur_key = &next_key;
-    }
+                /* Use key and value here */
+                inet_ntop(AF_INET, &next_key.data, ip_str, INET_ADDRSTRLEN);
+                printf("Found IP %s with Prefix %d and Value %d!\n", ip_str, next_key.prefixlen, value);
+
+                cur_key = &next_key;
+        }
 }
 
 
@@ -85,14 +90,21 @@ int main(int argc, char* argv[])
             printf("[-] Failure: Add Returned: %d\n", ret);
         }
     } else if (!strcmp(argv[1], "SEARCH") && argc == 3) {
-        inet_pton(AF_INET, argv[2], &ip);
+        if (inet_pton(AF_INET, argv[2], &ip) != 1) {
+            printf("[-] Invalid IP address format: %s\n", argv[2]);
+            usage(argv[0]);
+        }
         // build the lpm key structure
         struct ipv4_lpm_key ipv4_key = {
             .data = ip,
             .prefixlen = 32
         };
         ret = bpf_map_lookup_elem(lpm_trie_map_fd, &ipv4_key, &magic);
-        printf("[+] Found Magic Value: %d\n", magic);
+        if (ret < 0) {
+            printf("[-] Failure. IP Not Found.\n");
+        } else {
+            printf("[+] Found Magic Value: %d\n", magic);
+        }
     } else if (!strcmp(argv[1], "DUMP") && argc == 2) {
         iterate_lpm_trie(lpm_trie_map_fd);
     } else {
