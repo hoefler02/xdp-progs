@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# set up the development environment
+
 sudo ip netns add net1
 sudo ip netns add net2
 
